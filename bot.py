@@ -1,163 +1,259 @@
-# Don't Remove Credit @VJ_Botz
-# Subscribe YouTube Channel For Amazing Bot @Tech_VJ
-# Ask Doubt on telegram @KingVJ01
-
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from pyrogram import filters, Client, errors, enums
 from pyrogram.errors import UserNotParticipant
 from pyrogram.errors.exceptions.flood_420 import FloodWait
 from database import add_user, add_group, all_users, all_groups, users, remove_user
 from configs import cfg
-import random, asyncio
+import random
+import asyncio
+from urllib.parse import quote
+import uuid
 
+# Initialize the Telegram Client
 app = Client(
-    "approver",
+    name="approver",
     api_id=cfg.API_ID,
     api_hash=cfg.API_HASH,
     bot_token=cfg.BOT_TOKEN
 )
 
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Main process ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+# --------------------------------------------- Chat Join Request Handler ---------------------------------------------
 @app.on_chat_join_request(filters.group | filters.channel)
-async def approve(_, m : Message):
-    op = m.chat
-    kk = m.from_user
+async def approve_join_request(_, message: Message):
+    """Handle chat join requests for groups and channels."""
+    chat = message.chat
+    user = message.from_user
     try:
-        add_group(m.chat.id)
-        await app.approve_chat_join_request(op.id, kk.id)
-        await app.send_message(kk.id, "**Hello {}!\nWelcome To {}\n\n__Powerd By : @VJ_Botz __**".format(m.from_user.mention, m.chat.title))
-        add_user(kk.id)
-    except errors.PeerIdInvalid as e:
-        print("user isn't start bot(means group)")
+        # Add group to database and approve the join request
+        add_group(chat.id)
+        await app.approve_chat_join_request(chat.id, user.id)
+
+        # Fetch chat information and create an invite link
+        chat_info = await app.get_chat(chat.id)
+        invite_link = await app.create_chat_invite_link(chat.id)
+        share_text = f"Join {chat_info.title} 🚀"
+        encoded_text = quote(share_text)
+        encoded_url = quote(invite_link.invite_link)
+
+        # Include chat description if available
+        if chat_info.description:
+            share_text += f"\n\n{chat_info.description}"
+
+        # Create share URL for Telegram
+        share_url = f"https://t.me/share/url?url={encoded_url}&text={encoded_text}"
+
+        # Inline keyboard with specified buttons
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🌟 𝐕𝐞𝐫𝐢𝐟𝐲 𝐓𝐨 𝐀𝐩𝐩𝐫𝐨𝐯𝐞", url=share_url),
+                InlineKeyboardButton("📢 𝐒𝐢𝐦𝐢𝐥𝐚𝐫 𝐂𝐡𝐚𝐧𝐧𝐞𝐥𝐬", url="https://t.me/RequestApprovalv3_Bot?start=start")
+            ],
+            [
+                InlineKeyboardButton("💬𝐓𝐡𝐄 𝐃𝐈𝐒𝐂𝐎𝐔𝐑𝐒𝐄 𝐃𝐎𝐌𝐀𝐈𝐍", url="https://t.me/+4KVEFDTd3yRlODRl")
+            ]
+        ])
+
+        # Send welcome message to user's DM
+        await app.send_message(
+            user.id,
+            f"🎉 **Welcome to {chat.title}!** 🎉\n\n"
+            f"Your request to join has been approved! 🙌\n"
+            f"Help us grow by sharing this group with your friends! 🌐\n\n"
+            f"__Powered by @The_Ethans__",
+            reply_markup=keyboard
+        )
+        add_user(user.id)
+
+    except errors.PeerIdInvalid:
+        print("User hasn't started the bot or isn't part of the group.")
     except Exception as err:
-        print(str(err))    
- 
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Start ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        print(f"Error: {str(err)}")
 
+# --------------------------------------------- Start Command Handler ---------------------------------------------
 @app.on_message(filters.private & filters.command("start"))
-async def op(_, m :Message):
+async def start_command(_, message: Message):
+    """Handle the /start command in private chats."""
+    user = message.from_user
     try:
-        await app.get_chat_member(cfg.CHID, m.from_user.id)
-    except:
+        # Check if user is a member of the update channel
+        await app.get_chat_member(cfg.CHID, user.id)
+    except UserNotParticipant:
         try:
+            # Generate invite link for the update channel
             invite_link = await app.create_chat_invite_link(int(cfg.CHID))
-        except:
-            await m.reply("**Make Sure I Am Admin In Your Channel**")
-            return 
-        key = InlineKeyboardMarkup(
-            [[
-                InlineKeyboardButton("🍿 Join Update Channel 🍿", url=invite_link.invite_link),
-                InlineKeyboardButton("🍀 Check Again 🍀", callback_data="chk")
-            ]]
-        ) 
-        await m.reply_text("**⚠️Access Denied!⚠️\n\nPlease Join My Update Channel To Use Me.If You Joined The Channel Then Click On Check Again Button To Confirm.**", reply_markup=key)
-        return 
-    keyboard = InlineKeyboardMarkup(
-        [[
-            InlineKeyboardButton("🗯 Channel", url="https://t.me/vj_botz"),
-            InlineKeyboardButton("💬 Support", url="https://t.me/vj_bot_disscussion")
-        ]]
+        except Exception:
+            await message.reply("⚠️ **Error:** Please ensure I am an admin in your channel!")
+            return
+
+        # Create inline keyboard for channel join
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("📣 Join Channel", url=invite_link.invite_link),
+                InlineKeyboardButton("🔄 Check Again", callback_data="chk")
+            ]
+        ])
+        await message.reply_text(
+            "🚫 **Access Denied!**\n\n"
+            "To use this bot, please join our update channel first. "
+            "Once joined, click 'Check Again' to proceed! 🔐",
+            reply_markup=keyboard
+        )
+        return
+
+    # Welcome message with enhanced design
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📢 𝐃α𝗋𝗄 𝐎𝗋α𝖼ᥣ𝖾", url="https://t.me/Oracle_Dark"),
+            InlineKeyboardButton("💬 𝐓𝐡𝐄 𝐃𝐈𝐒𝐂𝐎𝐔𝐑𝐒𝐄 𝐃𝐎𝐌𝐀𝐈𝐍 ", url="https://t.me/+4KVEFDTd3yRlODRl")
+        ],
+        [
+                InlineKeyboardButton("➕𝗔𝗗𝗗 𝗠𝗘 ➕", url="https://t.me/RequestApprovalv3_Bot?startchannel=AdBots&admin=invite_users+manage_chat")
+            ],
+        [
+            InlineKeyboardButton("🌐 Cᴏɴᴛᴀᴄᴛ Fᴏʀ Aᴅs", url="https://t.me/Mortal_Demon")
+        ]
+    ])
+
+    add_user(user.id)
+    await message.reply_photo(
+        photo="https://graph.org/file/bc6102449fb6da8bf0418-ef1454d0e99fccaadf.jpg",
+        caption=(
+            f"👋 **Hello {user.mention}!** 👋\n\n"
+            f"Welcome to the **Auto Approve Bot**! 🤖\n"
+            f"I automatically approve join requests for groups and channels. "
+            f"Add me to your chat and grant me admin permissions to manage members! 🚀\n\n"
+            f"__Powered by @The_Ethans__"
+        ),
+        reply_markup=keyboard
     )
-    add_user(m.from_user.id)
-    await m.reply_photo("https://graph.org/file/d57d6f83abb6b8d0efb02.jpg", caption="**🦊 Hello {}!\nI'm an auto approve [Admin Join Requests]({}) Bot.\nI can approve users in Groups/Channels.Add me to your chat and promote me to admin with add members permission.\n\n__Powered By : @VJ_Botz __**".format(m.from_user.mention, "https://t.me/telegram/153"), reply_markup=keyboard)
-    
 
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ callback ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+# --------------------------------------------- Callback Query Handler ---------------------------------------------
 @app.on_callback_query(filters.regex("chk"))
-async def chk(_, cb : CallbackQuery):
+async def check_channel_membership(_, callback: CallbackQuery):
+    """Handle callback queries for checking channel membership."""
+    user = callback.from_user
     try:
-        await app.get_chat_member(cfg.CHID, cb.from_user.id)
-    except:
-        await cb.answer("🙅‍♂️ You are not joined my channel first join channel then check again. 🙅‍♂️", show_alert=True)
-        return 
-    keyboard = InlineKeyboardMarkup(
-        [[
-            InlineKeyboardButton("🗯 Channel", url="https://t.me/vj_botz"),
-            InlineKeyboardButton("💬 Support", url="https://t.me/vj_bot_disscussion")
-        ]]
+        await app.get_chat_member(cfg.CHID, user.id)
+    except UserNotParticipant:
+        await callback.answer(
+            "🚫 You haven't joined the update channel yet. Please join and try again! 🚫",
+            show_alert=True
+        )
+        return
+
+    # Welcome message after successful channel join
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📢 𝐓𝐡𝐄 𝐄𝐓𝐇𝐀𝐍𝐒", url="https://t.me/The_Ethans"),
+            InlineKeyboardButton("💬 𝐓𝐡𝐄 𝐃𝐈𝐒𝐂𝐎𝐔𝐑𝐒𝐄 𝐃𝐎𝐌𝐀𝐈𝐍", url="https://t.me/+4KVEFDTd3yRlODRl")
+        ],
+        [        InlineKeyboardButton("➕𝗔𝗗𝗗 𝗠𝗘 ➕", url="https://t.me/RequestApprovalv3_Bot?startchannel=AdBots&admin=invite_users+manage_chat")
+            ],
+        [
+            InlineKeyboardButton("🌐 Cᴏɴᴛᴀᴄᴛ Fᴏʀ Aᴅs", url="https://t.me/Mortal_Demon")
+        ]
+    ])
+
+    add_user(user.id)
+    await callback.message.edit_text(
+        text=(
+            f"🎉 **Welcome {user.mention}!** 🎉\n\n"
+            f"I'm the **Auto Approve Bot**! 🤖\n"
+            f"I handle join requests for groups and channels automatically. "
+            f"Add me to your chat and make me an admin with member management permissions! 🚀\n\n"
+            f"__Powered by @The_Ethans__"
+        ),
+        reply_markup=keyboard
     )
-    add_user(m.from_user.id)
-    await cb.edit_text(text="**🦊 Hello {}!\nI'm an auto approve [Admin Join Requests]({}) Bot.\nI can approve users in Groups/Channels.Add me to your chat and promote me to admin with add members permission.\n\n__Powered By : @VJ_Botz __**".format(cb.from_user.mention, "https://t.me/telegram/153"), reply_markup=keyboard)
-    
 
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ info ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+# --------------------------------------------- User and Group Stats Handler ---------------------------------------------
 @app.on_message(filters.command("users") & filters.user(cfg.SUDO))
-async def dbtool(_, m : Message):
-    xx = all_users()
-    x = all_groups()
-    tot = int(xx + x)
-    await m.reply_text(text=f"""
-🍀 Chats Stats 🍀
-🙋‍♂️ Users : `{xx}`
-👥 Groups : `{x}`
-🚧 Total users & groups : `{tot}` """)
+async def stats_command(_, message: Message):
+    """Display statistics about users and groups."""
+    total_users = all_users()
+    total_groups = all_groups()
+    total_chats = total_users + total_groups
 
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Broadcast ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    await message.reply_text(
+        f"📊 **Chat Statistics** 📊\n\n"
+        f"🙋‍♂️ **Users**: `{total_users}`\n"
+        f"👥 **Groups**: `{total_groups}`\n"
+        f"🌐 **Total Chats**: `{total_chats}`"
+    )
 
+# --------------------------------------------- Broadcast Message Handler ---------------------------------------------
 @app.on_message(filters.command("bcast") & filters.user(cfg.SUDO))
-async def bcast(_, m : Message):
-    allusers = users
-    lel = await m.reply_text("`⚡️ Processing...`")
+async def broadcast_message(_, message: Message):
+    """Broadcast a message to all users."""
+    all_users = users
+    status_message = await message.reply_text("⚡ **Processing Broadcast...**")
     success = 0
     failed = 0
     deactivated = 0
     blocked = 0
-    for usrs in allusers.find():
+
+    for user in all_users.find():
         try:
-            userid = usrs["user_id"]
-            #print(int(userid))
-            if m.command[0] == "bcast":
-                await m.reply_to_message.copy(int(userid))
-            success +=1
+            user_id = user["user_id"]
+            await message.reply_to_message.copy(int(user_id))
+            success += 1
         except FloodWait as ex:
             await asyncio.sleep(ex.value)
-            if m.command[0] == "bcast":
-                await m.reply_to_message.copy(int(userid))
+            await message.reply_to_message.copy(int(user_id))
         except errors.InputUserDeactivated:
-            deactivated +=1
-            remove_user(userid)
+            deactivated += 1
+            remove_user(user_id)
         except errors.UserIsBlocked:
-            blocked +=1
+            blocked += 1
         except Exception as e:
-            print(e)
-            failed +=1
+            print(f"Broadcast error: {e}")
+            failed += 1
 
-    await lel.edit(f"✅Successfull to `{success}` users.\n❌ Faild to `{failed}` users.\n👾 Found `{blocked}` Blocked users \n👻 Found `{deactivated}` Deactivated users.")
+    await status_message.edit(
+        f"📢 **Broadcast Report** 📢\n\n"
+        f"✅ **Successful**: `{success}` users\n"
+        f"❌ **Failed**: `{failed}` users\n"
+        f"🚫 **Blocked**: `{blocked}` users\n"
+        f"👻 **Deactivated**: `{deactivated}` users"
+    )
 
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Broadcast Forward ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+# --------------------------------------------- Broadcast Forward Handler ---------------------------------------------
 @app.on_message(filters.command("fcast") & filters.user(cfg.SUDO))
-async def fcast(_, m : Message):
-    allusers = users
-    lel = await m.reply_text("`⚡️ Processing...`")
+async def forward_broadcast(_, message: Message):
+    """Forward a message to all users."""
+    all_users = users
+    status_message = await message.reply_text("⚡ **Processing Forward...**")
     success = 0
     failed = 0
     deactivated = 0
     blocked = 0
-    for usrs in allusers.find():
+
+    for user in all_users.find():
         try:
-            userid = usrs["user_id"]
-            #print(int(userid))
-            if m.command[0] == "fcast":
-                await m.reply_to_message.forward(int(userid))
-            success +=1
+            user_id = user["user_id"]
+            await message.reply_to_message.forward(int(user_id))
+            success += 1
         except FloodWait as ex:
             await asyncio.sleep(ex.value)
-            if m.command[0] == "fcast":
-                await m.reply_to_message.forward(int(userid))
+            await message.reply_to_message.forward(int(user_id))
         except errors.InputUserDeactivated:
-            deactivated +=1
-            remove_user(userid)
+            deactivated += 1
+            remove_user(user_id)
         except errors.UserIsBlocked:
-            blocked +=1
+            blocked += 1
         except Exception as e:
-            print(e)
-            failed +=1
+            print(f"Forward error: {e}")
+            failed += 1
 
-    await lel.edit(f"✅Successfull to `{success}` users.\n❌ Faild to `{failed}` users.\n👾 Found `{blocked}` Blocked users \n👻 Found `{deactivated}` Deactivated users.")
+    await status_message.edit(
+        f"📢 **Forward Report** 📢\n\n"
+        f"✅ **Successful**: `{success}` users\n"
+        f"❌ **Failed**: `{failed}` users\n"
+        f"🚫 **Blocked**: `{blocked}` users\n"
+        f"👻 **Deactivated**: `{deactivated}` users"
+    )
 
-print("I'm Alive Now!")
-app.run()
+# --------------------------------------------- Bot Initialization ---------------------------------------------
+if __name__ == "__main__":
+    print("🤖 Bot is now online!")
+    app.run()
