@@ -49,7 +49,7 @@ async def approve_join_request(_, message: Message):
                 InlineKeyboardButton("📢 𝐒𝐢𝐦𝐢𝐥𝐚𝐫 𝐂𝐡𝐚𝐧𝐧𝐞𝐥𝐬", url="https://t.me/autoapprovalprobot?start=start")
             ],
             [
-                InlineKeyboardButton("💬𝐓ɦ� �α�αᑯ��� ��ᥣα𐓣ᑯ", url="https://t.me/CornParadise")
+                InlineKeyboardButton("💬�𝗛𝗘 𝗣𝗔𝗥𝗔𝗗𝗜𝗦𝗘 𝗜𝗦𝗟𝗔𝗡𝗗", url="https://t.me/CornParadise")
             ]
         ])
 
@@ -104,7 +104,7 @@ async def start_command(_, message: Message):
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("📢 𝐃α𝗋𝗄 𝐎𝗋α𝖼ᥣ𝖾", url="https://t.me/Oracle_Dark"),
-            InlineKeyboardButton("💬 𝐓ɦ� �α�αᑯ��� ��ᥣα𐓣ᑯ ", url="https://t.me/CornParadise")
+            InlineKeyboardButton("💬 �𝗛𝗘 𝗣𝗔𝗥𝗔𝗗𝗜𝗦𝗘 𝗜𝗦𝗟𝗔𝗡𝗗 ", url="https://t.me/CornParadise")
         ],
         [
                 InlineKeyboardButton("➕𝗔𝗗𝗗 𝗠𝗘 ➕", url="https://t.me/autoapprovalprobot?startchannel=AdBots&admin=invite_users+manage_chat")
@@ -144,8 +144,8 @@ async def check_channel_membership(_, callback: CallbackQuery):
     # Welcome message after successful channel join
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📢 𝐓𝐡𝐄 𝐄𝐓𝐇𝐀𝐍𝐒", url="https://t.me/The_Ethans"),
-            InlineKeyboardButton("💬 𝐓ɦ� �α�αᑯ��� ��ᥣα𐓣ᑯ", url="https://t.me/CornParadise")
+            InlineKeyboardButton("📢 ������", url="https://t.me/ALLHQC/5"),
+            InlineKeyboardButton("💬 �𝗛𝗘 𝗣𝗔𝗥𝗔𝗗𝗜𝗦𝗘 𝗜𝗦𝗟𝗔𝗡𝗗", url="https://t.me/CornParadise")
         ],
         [        InlineKeyboardButton("➕𝗔𝗗𝗗 𝗠𝗘 ➕", url="https://t.me/autoapprovalprobot?startchannel=AdBots&admin=invite_users+manage_chat")
             ],
