@@ -46,10 +46,10 @@ async def approve_join_request(_, message: Message):
         keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("🌟 𝐕𝐞𝐫𝐢𝐟𝐲 𝐓𝐨 𝐀𝐩𝐩𝐫𝐨𝐯𝐞", url=share_url),
-                InlineKeyboardButton("📢 𝐒𝐢𝐦𝐢𝐥𝐚𝐫 𝐂𝐡𝐚𝐧𝐧𝐞𝐥𝐬", url="https://t.me/RequestApprovalv3_Bot?start=start")
+                InlineKeyboardButton("📢 𝐒𝐢𝐦𝐢𝐥𝐚𝐫 𝐂𝐡𝐚𝐧𝐧𝐞𝐥𝐬", url="https://t.me/autoapprovalprobot?start=start")
             ],
             [
-                InlineKeyboardButton("💬𝐓𝐡𝐄 𝐃𝐈𝐒𝐂𝐎𝐔𝐑𝐒𝐄 𝐃𝐎𝐌𝐀𝐈𝐍", url="https://t.me/+4KVEFDTd3yRlODRl")
+                InlineKeyboardButton("💬𝐓ɦ� �α�αᑯ��� ��ᥣα𐓣ᑯ", url="https://t.me/CornParadise")
             ]
         ])
 
@@ -59,7 +59,7 @@ async def approve_join_request(_, message: Message):
             f"🎉 **Welcome to {chat.title}!** 🎉\n\n"
             f"Your request to join has been approved! 🙌\n"
             f"Help us grow by sharing this group with your friends! 🌐\n\n"
-            f"__Powered by @The_Ethans__",
+            f"__Powered by @ALLHQC__",
             reply_markup=keyboard
         )
         add_user(user.id)
@@ -104,13 +104,13 @@ async def start_command(_, message: Message):
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("📢 𝐃α𝗋𝗄 𝐎𝗋α𝖼ᥣ𝖾", url="https://t.me/Oracle_Dark"),
-            InlineKeyboardButton("💬 𝐓𝐡𝐄 𝐃𝐈𝐒𝐂𝐎𝐔𝐑𝐒𝐄 𝐃𝐎𝐌𝐀𝐈𝐍 ", url="https://t.me/+4KVEFDTd3yRlODRl")
+            InlineKeyboardButton("💬 𝐓ɦ� �α�αᑯ��� ��ᥣα𐓣ᑯ ", url="https://t.me/CornParadise")
         ],
         [
-                InlineKeyboardButton("➕𝗔𝗗𝗗 𝗠𝗘 ➕", url="https://t.me/RequestApprovalv3_Bot?startchannel=AdBots&admin=invite_users+manage_chat")
+                InlineKeyboardButton("➕𝗔𝗗𝗗 𝗠𝗘 ➕", url="https://t.me/autoapprovalprobot?startchannel=AdBots&admin=invite_users+manage_chat")
             ],
         [
-            InlineKeyboardButton("🌐 Cᴏɴᴛᴀᴄᴛ Fᴏʀ Aᴅs", url="https://t.me/Mortal_Demon")
+            InlineKeyboardButton("🌐 Cᴏɴᴛᴀᴄᴛ Fᴏʀ Aᴅs", url="https://t.me/awakendheart")
         ]
     ])
 
@@ -122,7 +122,7 @@ async def start_command(_, message: Message):
             f"Welcome to the **Auto Approve Bot**! 🤖\n"
             f"I automatically approve join requests for groups and channels. "
             f"Add me to your chat and grant me admin permissions to manage members! 🚀\n\n"
-            f"__Powered by @The_Ethans__"
+            f"__Powered by @ALLHQC__"
         ),
         reply_markup=keyboard
     )
@@ -145,12 +145,12 @@ async def check_channel_membership(_, callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("📢 𝐓𝐡𝐄 𝐄𝐓𝐇𝐀𝐍𝐒", url="https://t.me/The_Ethans"),
-            InlineKeyboardButton("💬 𝐓𝐡𝐄 𝐃𝐈𝐒𝐂𝐎𝐔𝐑𝐒𝐄 𝐃𝐎𝐌𝐀𝐈𝐍", url="https://t.me/+4KVEFDTd3yRlODRl")
+            InlineKeyboardButton("💬 𝐓ɦ� �α�αᑯ��� ��ᥣα𐓣ᑯ", url="https://t.me/CornParadise")
         ],
-        [        InlineKeyboardButton("➕𝗔𝗗𝗗 𝗠𝗘 ➕", url="https://t.me/RequestApprovalv3_Bot?startchannel=AdBots&admin=invite_users+manage_chat")
+        [        InlineKeyboardButton("➕𝗔𝗗𝗗 𝗠𝗘 ➕", url="https://t.me/autoapprovalprobot?startchannel=AdBots&admin=invite_users+manage_chat")
             ],
         [
-            InlineKeyboardButton("🌐 Cᴏɴᴛᴀᴄᴛ Fᴏʀ Aᴅs", url="https://t.me/Mortal_Demon")
+            InlineKeyboardButton("🌐 Cᴏɴᴛᴀᴄᴛ Fᴏʀ Aᴅs", url="https://t.me/awakendheart")
         ]
     ])
 
@@ -161,7 +161,7 @@ async def check_channel_membership(_, callback: CallbackQuery):
             f"I'm the **Auto Approve Bot**! 🤖\n"
             f"I handle join requests for groups and channels automatically. "
             f"Add me to your chat and make me an admin with member management permissions! 🚀\n\n"
-            f"__Powered by @The_Ethans__"
+            f"__Powered by @ALLHQC__"
         ),
         reply_markup=keyboard
     )
