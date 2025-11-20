@@ -8,7 +8,7 @@ from os import path, getenv
 class Config:
     API_ID = int(getenv("API_ID", "25489830"))
     API_HASH = getenv("API_HASH", "b3df97daea65252260b2c2513a94ee5a")
-    BOT_TOKEN = getenv("BOT_TOKEN", "8207506694:AAGLUiu9UUZcbvjnlfqBkfFOv4T7S8HdAes")
+    BOT_TOKEN = getenv("BOT_TOKEN", "8301345177:AAHEOi5_ohoPhUpLN_ff-OQRjn5e4ArKrGg")
     # Your Force Subscribe Channel Id Below 
     CHID = int(getenv("CHID", "-1002706901945")) # Make Bot Admin In This Channel
     # Admin Or Owner Id Below
