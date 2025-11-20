@@ -1,116 +1,124 @@
-from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
-from pyrogram import filters, Client, errors, enums
-from pyrogram.errors import UserNotParticipant
-from pyrogram.errors.exceptions.flood_420 import FloodWait
-from database import add_user, add_group, all_users, all_groups, users, remove_user
-from configs import cfg
-import random
+from pyrogram import Client, filters, ContinuePropagation
+from pyrogram.types import (
+    Message, InlineKeyboardButton, InlineKeyboardMarkup,
+    CallbackQuery, ChatJoinRequest
+)
+from pyrogram.errors import FloodWait, UserNotParticipant, PeerIdInvalid
 import asyncio
 from urllib.parse import quote
-import uuid
+from database import add_user, add_group, all_users, all_groups, users, remove_user
+from configs import cfg
+import time
 
-# Initialize the Telegram Client
+# Initialize Bot
 app = Client(
-    name="approver",
+    "approver",
     api_id=cfg.API_ID,
     api_hash=cfg.API_HASH,
     bot_token=cfg.BOT_TOKEN
 )
 
-# --------------------------------------------- Chat Join Request Handler ---------------------------------------------
-@app.on_chat_join_request(filters.group | filters.channel)
-async def approve_join_request(_, message: Message):
-    """Handle chat join requests for groups and channels."""
-    chat = message.chat
-    user = message.from_user
+# Auto Approve Join Requests
+@app.on_chat_join_request((filters.group | filters.channel))
+async def auto_approve(client: Client, request: ChatJoinRequest):
+    chat = request.chat
+    user = request.from_user
+
     try:
-        # Add group to database and approve the join request
+        # Check if bot is admin with invite permission
+        me = await client.get_chat_member(chat.id, "me")
+        if not me.privileges or not me.privileges.can_invite_users:
+            return
+
+        await client.approve_chat_join_request(chat.id, user.id)
         add_group(chat.id)
-        await app.approve_chat_join_request(chat.id, user.id)
 
-        # Fetch chat information and create an invite link
-        chat_info = await app.get_chat(chat.id)
-        invite_link = await app.create_chat_invite_link(chat.id)
-        share_text = f"Join {chat_info.title} 🚀"
+        # Generate invite link safely
+        try:
+            invite_link = await client.export_invite_link(chat.id)
+        except:
+            invite_link = f"https://t.me/{chat.username}" if chat.username else "https://t.me/telegram"
+
+        share_text = f"Join {chat.title}!"
+        if chat.description:
+            share_text += f"\n\n{chat.description}"
+
         encoded_text = quote(share_text)
-        encoded_url = quote(invite_link.invite_link)
+        encoded_link = quote(invite_link)
+        share_url = f"https://t.me/share/url?url={encoded_link}&text={encoded_text}"
 
-        # Include chat description if available
-        if chat_info.description:
-            share_text += f"\n\n{chat_info.description}"
-
-        # Create share URL for Telegram
-        share_url = f"https://t.me/share/url?url={encoded_url}&text={encoded_text}"
-
-        # Inline keyboard with specified buttons
         keyboard = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("🌟 𝐕𝐞𝐫𝐢𝐟𝐲 𝐓𝐨 𝐀𝐩𝐩𝐫𝐨𝐯𝐞", url=share_url),
-                InlineKeyboardButton("📢 𝐒𝐢𝐦𝐢𝐥𝐚𝐫 𝐂𝐡𝐚𝐧𝐧𝐞𝐥𝐬", url="https://t.me/autoapprovalprobot?start=start")
+                InlineKeyboardButton("Verify To Approve", url=share_url),
+                InlineKeyboardButton("Similar Channels", url="https://t.me/autoapprovalprobot?start=start")
             ],
             [
-                InlineKeyboardButton("💬�𝗛𝗘 𝗣𝗔𝗥𝗔𝗗𝗜𝗦𝗘 𝗜𝗦𝗟𝗔𝗡𝗗", url="https://t.me/CornParadise")
+                InlineKeyboardButton("THE PARADISE ISLAND", url="https://t.me/CornParadise")
             ]
         ])
 
-        # Send welcome message to user's DM
-        await app.send_message(
-            user.id,
-            f"🎉 **Welcome to {chat.title}!** 🎉\n\n"
-            f"Your request to join has been approved! 🙌\n"
-            f"Help us grow by sharing this group with your friends! 🌐\n\n"
-            f"__Powered by @ALLHQC__",
-            reply_markup=keyboard
+        welcome_msg = (
+            f"**Welcome to {chat.title}!**\n\n"
+            f"Your request has been approved!\n"
+            f"Help us grow by sharing this group!\n\n"
+            f"Powered by @ALLHQC"
+        )
+
+        await client.send_message(
+            chat_id=user.id,
+            text=welcome_msg,
+            reply_markup=keyboard,
+            disable_web_page_preview=True
         )
         add_user(user.id)
 
-    except errors.PeerIdInvalid:
-        print("User hasn't started the bot or isn't part of the group.")
-    except Exception as err:
-        print(f"Error: {str(err)}")
+    except PeerIdInvalid:
+        print(f"[{user.id}] User has not started the bot.")
+    except FloodWait as e:
+        print(f"FloodWait: Sleeping for {e.value} seconds")
+        await asyncio.sleep(e.value)
+    except Exception as e:
+        print(f"Error in join request: {e}")
 
-# --------------------------------------------- Start Command Handler ---------------------------------------------
+# Start Command
 @app.on_message(filters.private & filters.command("start"))
-async def start_command(_, message: Message):
-    """Handle the /start command in private chats."""
+async def start(client: Client, message: Message):
     user = message.from_user
+
+    # Force join check
     try:
-        # Check if user is a member of the update channel
-        await app.get_chat_member(cfg.CHID, user.id)
+        await client.get_chat_member(cfg.CHID, user.id)
     except UserNotParticipant:
         try:
-            # Generate invite link for the update channel
-            invite_link = await app.create_chat_invite_link(int(cfg.CHID))
-        except Exception:
-            await message.reply("⚠️ **Error:** Please ensure I am an admin in your channel!")
-            return
+            link = await client.export_invite_link(cfg.CHID)
+        except:
+            link = f"https://t.me/{(await client.get_chat(cfg.CHID)).username}"
 
-        # Create inline keyboard for channel join
         keyboard = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("📣 Join Channel", url=invite_link.invite_link),
-                InlineKeyboardButton("🔄 Check Again", callback_data="chk")
+                InlineKeyboardButton("Join Channel", url=link),
+                InlineKeyboardButton("Check Again", callback_data="checkjoin")
             ]
         ])
+
         await message.reply_text(
-            "🚫 **Access Denied!**\n\n"
-            "To use this bot, please join our update channel first. "
-            "Once joined, click 'Check Again' to proceed! 🔐",
+            "**Access Denied!**\n\n"
+            "Please join our update channel first to use this bot.\n"
+            "After joining, press 'Check Again'",
             reply_markup=keyboard
         )
         return
 
-    # Welcome message with enhanced design
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📢 𝐃α𝗋𝗄 𝐎𝗋α𝖼ᥣ𝖾", url="https://t.me/Oracle_Dark"),
-            InlineKeyboardButton("💬 �𝗛𝗘 𝗣𝗔𝗥𝗔𝗗𝗜𝗦𝗘 𝗜𝗦𝗟𝗔𝗡𝗗 ", url="https://t.me/CornParadise")
+            InlineKeyboardButton("Dark Oracle", url="https://t.me/Oracle_Dark"),
+            InlineKeyboardButton("THE PARADISE ISLAND", url="https://t.me/CornParadise")
         ],
         [
-                InlineKeyboardButton("➕𝗔𝗗𝗗 𝗠𝗘 ➕", url="https://t.me/autoapprovalprobot?startchannel=AdBots&admin=invite_users+manage_chat")
-            ],
+            InlineKeyboardButton("ADD ME", url="https://t.me/autoapprovalprobot?startchannel=AdBots&admin=invite_users+manage_chat")
+        ],
         [
-            InlineKeyboardButton("🌐 Cᴏɴᴛᴀᴄᴛ Fᴏʀ Aᴅs", url="https://t.me/awakendheart")
+            InlineKeyboardButton("Contact For Ads", url="https://t.me/awakendheart")
         ]
     ])
 
@@ -118,142 +126,85 @@ async def start_command(_, message: Message):
     await message.reply_photo(
         photo="https://graph.org/file/bc6102449fb6da8bf0418-ef1454d0e99fccaadf.jpg",
         caption=(
-            f"👋 **Hello {user.mention}!** 👋\n\n"
-            f"Welcome to the **Auto Approve Bot**! 🤖\n"
-            f"I automatically approve join requests for groups and channels. "
-            f"Add me to your chat and grant me admin permissions to manage members! 🚀\n\n"
-            f"__Powered by @ALLHQC__"
+            f"**Hello {user.mention}!**\n\n"
+            "Welcome to **Auto Approve Bot**!\n"
+            "I automatically approve join requests in groups & channels.\n\n"
+            "Add me as admin with 'Manage Join Requests' permission!\n\n"
+            "Powered by @ALLHQC"
         ),
         reply_markup=keyboard
     )
 
-# --------------------------------------------- Callback Query Handler ---------------------------------------------
-@app.on_callback_query(filters.regex("chk"))
-async def check_channel_membership(_, callback: CallbackQuery):
-    """Handle callback queries for checking channel membership."""
-    user = callback.from_user
+# Check Join Callback
+@app.on_callback_query(filters.regex("^checkjoin$"))
+async def check_join(client: Client, callback: CallbackQuery):
     try:
-        await app.get_chat_member(cfg.CHID, user.id)
+        await client.get_chat_member(cfg.CHID, callback.from_user.id)
     except UserNotParticipant:
-        await callback.answer(
-            "🚫 You haven't joined the update channel yet. Please join and try again! 🚫",
-            show_alert=True
-        )
+        await callback.answer("You still haven't joined the channel!", show_alert=True)
         return
 
-    # Welcome message after successful channel join
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("📢 ������", url="https://t.me/ALLHQC/5"),
-            InlineKeyboardButton("💬 �𝗛𝗘 𝗣𝗔𝗥𝗔𝗗𝗜𝗦𝗘 𝗜𝗦𝗟𝗔𝗡𝗗", url="https://t.me/CornParadise")
-        ],
-        [        InlineKeyboardButton("➕𝗔𝗗𝗗 𝗠𝗘 ➕", url="https://t.me/autoapprovalprobot?startchannel=AdBots&admin=invite_users+manage_chat")
-            ],
-        [
-            InlineKeyboardButton("🌐 Cᴏɴᴛᴀᴄᴛ Fᴏʀ Aᴅs", url="https://t.me/awakendheart")
-        ]
-    ])
+    await callback.message.delete()
+    await start(client, callback.message)  # Reuse start function
+    await callback.answer("Access Granted!")
 
-    add_user(user.id)
-    await callback.message.edit_text(
-        text=(
-            f"🎉 **Welcome {user.mention}!** 🎉\n\n"
-            f"I'm the **Auto Approve Bot**! 🤖\n"
-            f"I handle join requests for groups and channels automatically. "
-            f"Add me to your chat and make me an admin with member management permissions! 🚀\n\n"
-            f"__Powered by @ALLHQC__"
-        ),
-        reply_markup=keyboard
-    )
-
-# --------------------------------------------- User and Group Stats Handler ---------------------------------------------
+# Stats Command (Sudo Only)
 @app.on_message(filters.command("users") & filters.user(cfg.SUDO))
-async def stats_command(_, message: Message):
-    """Display statistics about users and groups."""
-    total_users = all_users()
-    total_groups = all_groups()
-    total_chats = total_users + total_groups
-
+async def stats(_, message: Message):
     await message.reply_text(
-        f"📊 **Chat Statistics** 📊\n\n"
-        f"🙋‍♂️ **Users**: `{total_users}`\n"
-        f"👥 **Groups**: `{total_groups}`\n"
-        f"🌐 **Total Chats**: `{total_chats}`"
+        f"**Bot Stats**\n\n"
+        f"Users: `{len(all_users())}`\n"
+        f"Groups: `{len(all_groups())}`\n"
+        f"Total: `{len(all_users()) + len(all_groups())}`"
     )
 
-# --------------------------------------------- Broadcast Message Handler ---------------------------------------------
+# Broadcast (Reply to message)
 @app.on_message(filters.command("bcast") & filters.user(cfg.SUDO))
-async def broadcast_message(_, message: Message):
-    """Broadcast a message to all users."""
-    all_users = users
-    status_message = await message.reply_text("⚡ **Processing Broadcast...**")
-    success = 0
+async def broadcast(client: Client, message: Message):
+    if not message.reply_to_message:
+        await message.reply("Reply to a message to broadcast!")
+        return
+
+    users_list = [user["user_id"] async for user in users.find()]
+    sent = 0
     failed = 0
-    deactivated = 0
-    blocked = 0
+    status = await message.reply("Broadcasting...")
 
-    for user in all_users.find():
+    for user_id in users_list:
         try:
-            user_id = user["user_id"]
-            await message.reply_to_message.copy(int(user_id))
-            success += 1
-        except FloodWait as ex:
-            await asyncio.sleep(ex.value)
-            await message.reply_to_message.copy(int(user_id))
-        except errors.InputUserDeactivated:
-            deactivated += 1
-            remove_user(user_id)
-        except errors.UserIsBlocked:
-            blocked += 1
-        except Exception as e:
-            print(f"Broadcast error: {e}")
+            await message.reply_to_message.copy(user_id)
+            sent += 1
+        except FloodWait as e:
+            await asyncio.sleep(e.value)
+        except:
             failed += 1
+        await status.edit_text(f"Broadcast: {sent} sent | {failed} failed")
 
-    await status_message.edit(
-        f"📢 **Broadcast Report** 📢\n\n"
-        f"✅ **Successful**: `{success}` users\n"
-        f"❌ **Failed**: `{failed}` users\n"
-        f"🚫 **Blocked**: `{blocked}` users\n"
-        f"👻 **Deactivated**: `{deactivated}` users"
-    )
+    await status.edit_text(f"**Broadcast Completed**\nSent: `{sent}`\nFailed: `{failed}`")
 
-# --------------------------------------------- Broadcast Forward Handler ---------------------------------------------
+# Forward Cast
 @app.on_message(filters.command("fcast") & filters.user(cfg.SUDO))
-async def forward_broadcast(_, message: Message):
-    """Forward a message to all users."""
-    all_users = users
-    status_message = await message.reply_text("⚡ **Processing Forward...**")
-    success = 0
-    failed = 0
-    deactivated = 0
-    blocked = 0
+async def fcast(client: Client, message: Message):
+    if not message.reply_to_message:
+        return await message.reply("Reply to a message!")
 
-    for user in all_users.find():
+    users_list = [user["user_id"] async for user in users.find()]
+    sent = 0
+    status = await message.reply("Forwarding...")
+
+    for user_id in users_list:
         try:
-            user_id = user["user_id"]
-            await message.reply_to_message.forward(int(user_id))
-            success += 1
-        except FloodWait as ex:
-            await asyncio.sleep(ex.value)
-            await message.reply_to_message.forward(int(user_id))
-        except errors.InputUserDeactivated:
-            deactivated += 1
-            remove_user(user_id)
-        except errors.UserIsBlocked:
-            blocked += 1
-        except Exception as e:
-            print(f"Forward error: {e}")
-            failed += 1
+            await message.reply_to_message.forward(user_id)
+            sent += 1
+        except FloodWait as e:
+            await asyncio.sleep(e.value)
+        except:
+            pass
+        if sent % 10 == 0:
+            await status.edit_text(f"Forwarded to {sent} users...")
 
-    await status_message.edit(
-        f"📢 **Forward Report** 📢\n\n"
-        f"✅ **Successful**: `{success}` users\n"
-        f"❌ **Failed**: `{failed}` users\n"
-        f"🚫 **Blocked**: `{blocked}` users\n"
-        f"👻 **Deactivated**: `{deactivated}` users"
-    )
+    await status.edit_text(f"**Forward Completed: {sent} users**")
 
-# --------------------------------------------- Bot Initialization ---------------------------------------------
-if __name__ == "__main__":
-    print("🤖 Bot is now online!")
-    app.run()
+# Run Bot
+print("Auto Approve Bot Started!")
+app.run()
